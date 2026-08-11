@@ -48,7 +48,9 @@ services:
       timeout: 90s
 
   web:
-    run: pnpm --filter @app/web dev
+    # sklp-create only writes the lockfile, and node_modules built on the host
+    # would carry host-resolved paths, so the install belongs to the space.
+    run: pnpm install --frozen-lockfile && pnpm --filter @app/web dev
     port: 5273
     depends_on:
       - core
@@ -58,4 +60,5 @@ services:
       PORT: "5273"
     ready:
       http: /
-      timeout: 60s
+      # First boot installs the whole workspace before vite starts.
+      timeout: 300s
