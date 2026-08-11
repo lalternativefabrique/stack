@@ -54,6 +54,9 @@ services:
       - core
     env:
       API_URL: http://core:4100
+      # Override .env's PORT=4100 (core's): TanStack Start/nitro honours $PORT
+      # over --port, so without this the web binds 4100 and the probe fails.
+      PORT: "5273"
     ready:
-      http: http://localhost:5273
+      http: /
       timeout: 60s

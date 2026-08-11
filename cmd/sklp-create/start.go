@@ -280,8 +280,11 @@ func rewireWebPackageJSON(path string) error {
 	s := string(b)
 	repl := []struct{ from, to string }{
 		{`"name": "web"`, `"name": "@app/web"`},
-		{`"dev": "vite dev --port 3000"`, `"dev": "vite dev --port 5273"`},
-		{`"preview": "vite preview"`, `"preview": "vite preview --port 5273"`},
+		// --host binds 0.0.0.0: sklp dev runs this inside a container, and a
+		// server left on the loopback answers nothing through the published
+		// port, so the readiness probe times out on a server that did start.
+		{`"dev": "vite dev --port 3000"`, `"dev": "vite dev --port 5273 --host 0.0.0.0"`},
+		{`"preview": "vite preview"`, `"preview": "vite preview --port 5273 --host 0.0.0.0"`},
 		// The stack CI runs `pnpm --filter @app/web typecheck`; the TanStack CLI
 		// ships `lint`/`test` but no typecheck script. Generate the route tree
 		// first (it is not committed, so `tsc` alone fails with "Cannot find
