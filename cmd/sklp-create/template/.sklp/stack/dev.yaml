@@ -54,6 +54,8 @@ services:
       - core
     env:
       API_URL: http://core:4100
+      # Overrides .env's PORT=4100 (core's), which TanStack Start honours over --port.
+      PORT: "5273"
     ready:
-      http: http://localhost:5273
+      http: /
       timeout: 60s

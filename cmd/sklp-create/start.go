@@ -111,10 +111,15 @@ func runStart(name string, assumeYes bool) error {
 }
 
 // scaffoldWeb generates apps/web on the fly with the official TanStack CLI
-// (React + Nitro SSR + TanStack Query), then rewires it into the stack:
-// package name @app/web and dev/preview on the stack port (5273). The stack's
+// (React + TanStack Query), then rewires it into the stack: package name
+// @app/web and dev/preview on the stack port (5273). The stack's
 // dev/CI/build/publish all reference apps/web + @app/web, so those two must
 // match; everything else is left as the CLI produced it (kept up to date).
+//
+// No --deployment adapter: `--deployment nitro` adds a nitro() plugin next to
+// tanstackStart() in vite.config.ts, and the two register competing SSR
+// environments — dev then dies on "Failed to load url .../dev-entry.mjs".
+// Deployment here is sklp's own images, so no adapter is needed.
 func scaffoldWeb(name string) error {
 	// Absolute target so the CLI writes into the generated project regardless
 	// of the process cwd.
@@ -127,7 +132,6 @@ func scaffoldWeb(name string) error {
 		"--framework", "React",
 		"--target-dir", abs,
 		"--package-manager", "pnpm",
-		"--deployment", "nitro",
 		"--add-ons", "tanstack-query",
 		"--toolchain", "eslint",
 		"--no-git", "--no-install", "--no-examples",
@@ -280,8 +284,11 @@ func rewireWebPackageJSON(path string) error {
 	s := string(b)
 	repl := []struct{ from, to string }{
 		{`"name": "web"`, `"name": "@app/web"`},
-		{`"dev": "vite dev --port 3000"`, `"dev": "vite dev --port 5273"`},
-		{`"preview": "vite preview"`, `"preview": "vite preview --port 5273"`},
+		// --host binds 0.0.0.0: sklp dev runs this inside a container, and a
+		// server left on the loopback answers nothing through the published
+		// port, so the readiness probe times out on a server that did start.
+		{`"dev": "vite dev --port 3000"`, `"dev": "vite dev --port 5273 --host 0.0.0.0"`},
+		{`"preview": "vite preview"`, `"preview": "vite preview --port 5273 --host 0.0.0.0"`},
 		// The stack CI runs `pnpm --filter @app/web typecheck`; the TanStack CLI
 		// ships `lint`/`test` but no typecheck script. Generate the route tree
 		// first (it is not committed, so `tsc` alone fails with "Cannot find

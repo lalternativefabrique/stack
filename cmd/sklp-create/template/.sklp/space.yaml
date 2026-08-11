@@ -17,6 +17,12 @@ runner:
   go_tools:
     - github.com/swaggo/swag/cmd/swag@v1.16.6
     - golang.org/x/vuln/cmd/govulncheck@v1.1.4
+    # The core applies its own migrations at boot (db.Migrate in main.go), so
+    # golang-migrate is not needed here. If you move to it and add a `migrate`
+    # service, declare it WITH the tag — the postgres driver registers itself
+    # from a build tag, and the untagged binary starts and then fails with
+    # "unknown driver postgres":
+    # - github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1 +tags=postgres
 
   env:
     GOPRIVATE: github.com/digstack
