@@ -13,6 +13,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -112,7 +114,24 @@ func main() {
 		port = "4100"
 	}
 	log.Printf("core listening on :%s (nats=%s)", port, natsURL)
-	if err := e.Start(":" + port); err != nil {
-		log.Fatal(err)
+	go func() {
+		if err := e.Start(":" + port); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	// Block on SIGTERM rather than on Start: the deferred cleanups above
+	// (consumers, NATS drain, pool) never run past a log.Fatal, which exits
+	// the process outright. Kubernetes sends SIGTERM and waits
+	// terminationGracePeriodSeconds before SIGKILL, so keep the drain under it.
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+	log.Print("shutting down")
+
+	drainCtx, cancelDrain := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancelDrain()
+	if err := e.Shutdown(drainCtx); err != nil {
+		log.Printf("http shutdown: %v", err)
 	}
 }
