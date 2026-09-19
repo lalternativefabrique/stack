@@ -1,7 +1,7 @@
 # web image — SSR server (TanStack Start + Nitro)
 # Pin pnpm explicitly (never @latest in Dockerfile.web — see memory).
-FROM node:22-bookworm AS build
-RUN corepack enable && corepack prepare pnpm@10.27.0 --activate
+FROM node:24-bookworm AS build
+RUN corepack enable && corepack prepare pnpm@11.3.0 --activate
 WORKDIR /src
 ENV CI=true
 # Workspace manifests first (better layer caching).
@@ -16,7 +16,7 @@ RUN pnpm --filter @app/web build
 # Prune to production deps for the runtime image.
 RUN pnpm deploy --filter @app/web --prod --legacy /prod
 
-FROM node:22-bookworm-slim
+FROM node:24-bookworm-slim
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /prod/node_modules ./node_modules

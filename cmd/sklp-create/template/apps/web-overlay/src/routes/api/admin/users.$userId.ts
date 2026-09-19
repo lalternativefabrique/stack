@@ -23,6 +23,7 @@ export const Route = createFileRoute('/api/admin/users/$userId')({
       }) => {
         // PlatformSession is @lalternative/auth's hand-maintained contract for
         // what getSession really returns (the widened Auth type hides `role`).
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- tsc needs this cast, eslint reads it as redundant
         const session = (await auth.api.getSession({
           headers: request.headers,
         })) as PlatformSession | null

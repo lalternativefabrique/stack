@@ -1,10 +1,9 @@
-import type { AdminUser, AdminUserApi } from '@lalternative/admin'
+import type { AdminUserApi } from '@lalternative/admin'
 import { authClient } from './auth-client'
 
 /**
  * Adapter from the Better Auth admin() client to `@lalternative/admin`'s
- * `AdminUserApi`. This is the one place that touches the auth client's (widened,
- * role-hiding) type, so the shared admin components stay decoupled from it.
+ * `AdminUserApi`, so the shared admin components stay decoupled from it.
  *
  * Delete is intentionally NOT wired here — the users table routes deletion to
  * the server endpoint at /api/admin/users/$userId (better-auth remove-user +
@@ -15,8 +14,8 @@ export const adminUserApi: AdminUserApi = {
     const res = await authClient.admin.listUsers({ query: query ?? {} })
     if (res.error) throw new Error(res.error.message ?? 'Failed to load users')
     return {
-      users: (res.data?.users ?? []) as AdminUser[],
-      total: res.data?.total ?? res.data?.users?.length,
+      users: res.data.users,
+      total: res.data.total,
     }
   },
   banUser: async (userId, reason) => {

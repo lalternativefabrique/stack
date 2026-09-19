@@ -1,3 +1,16 @@
 packages:
   - apps/web
   - lib/*
+
+# pnpm 11 no longer reads the "pnpm" field in package.json, and blocks a
+# dependency's build scripts unless it is allowed here. These three fetch their
+# native binary from a postinstall, without which the web build fails.
+onlyBuiltDependencies:
+  - esbuild
+  - lightningcss
+  - unrs-resolver
+
+allowBuilds:
+  esbuild: true
+  lightningcss: true
+  unrs-resolver: true

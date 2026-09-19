@@ -13,6 +13,7 @@ export const Route = createFileRoute('/api/me')({
   server: {
     handlers: {
       GET: async ({ request }: { request: Request }) => {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- the base Auth type has no `role`; tsc needs this cast, eslint reads it as redundant
         const session = (await auth.api.getSession({
           headers: request.headers,
         })) as PlatformSession | null

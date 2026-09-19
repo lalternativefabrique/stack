@@ -13,8 +13,8 @@ inputs:
 
 tools:
   go: "1.26.5"
-  node: "22.19.0"
-  pnpm: "10.27.0"
+  node: "24.16.0"
+  pnpm: "11.3.0"
   gitleaks: "8.18.4"
   trivy: "0.70.0"
   govulncheck: "1.1.4"
