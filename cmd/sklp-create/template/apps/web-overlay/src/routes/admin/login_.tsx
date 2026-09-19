@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AdminLoginForm } from '@lalternative/admin'
+import '@lalternative/admin/styles.css'
 import { authClient } from '@/lib/auth-client'
 import { getProfile } from '@/lib/services/auth'
 

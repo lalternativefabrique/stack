@@ -149,7 +149,10 @@ func scaffoldWeb(name string) error {
 	// The lockfile is written later by overlayWeb, after patchWebDeps adds the
 	// admin/auth/pg dependencies — otherwise it would omit them and the stack
 	// CI's --frozen-lockfile install would fail.
-	return relaxWebTSConfig(filepath.Join(abs, "tsconfig.json"))
+	if err := relaxWebTSConfig(filepath.Join(abs, "tsconfig.json")); err != nil {
+		return err
+	}
+	return wireAdminStyles(filepath.Join(abs, "src", "styles.css"))
 }
 
 // webOverlayDeps are the dependencies the admin/auth overlay needs, added to
@@ -157,11 +160,11 @@ func scaffoldWeb(name string) error {
 // shared packages; better-auth is their peer; pg backs the setup route's direct
 // SQL. Kept in one place so the versions are easy to bump.
 var webOverlayDeps = map[string]string{
-	"@lalternative/auth":  "^0.1.2",
-	"@lalternative/admin": "^0.1.0",
-	"better-auth":         "^1.6.11",
-	"pg":                  "^8.18.0",
-	"@types/pg":           "^8.16.0",
+	"@lalternative/auth":  "^0.16.0",
+	"@lalternative/admin": "^0.10.0",
+	"better-auth":         "^1.7.5",
+	"pg":                  "^8.23.0",
+	"@types/pg":           "^8.23.1",
 }
 
 // overlayWeb lays the admin/auth overlay over the freshly-scaffolded web app:
@@ -270,6 +273,61 @@ func relaxWebTSConfig(path string) error {
 	s := string(b)
 	s = strings.ReplaceAll(s, `"noUnusedLocals": true`, `"noUnusedLocals": false`)
 	s = strings.ReplaceAll(s, `"noUnusedParameters": true`, `"noUnusedParameters": false`)
+	return os.WriteFile(path, []byte(s), 0o644)
+}
+
+// adminStylesBlock teaches Tailwind about @lalternative/admin. The package's
+// own stylesheet carries its palette as raw CSS variables and nothing else, so
+// two things are missing without this: Tailwind never scans node_modules, so
+// the utilities the components are written in (bg-card, text-muted-foreground,
+// rounded-xl) are never generated; and the variables are not Tailwind colours,
+// so those utilities resolve to nothing even once generated. Either gap alone
+// renders the back-office as unstyled boxes.
+const adminStylesBlock = `
+@source "../node_modules/@lalternative/admin/dist";
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+}
+`
+
+func wireAdminStyles(path string) error {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	s := string(b)
+	if strings.Contains(s, "@lalternative/admin/dist") {
+		return nil
+	}
+	marker := `@import "tailwindcss";`
+	i := strings.Index(s, marker)
+	if i < 0 {
+		return fmt.Errorf("no %s in %s (TanStack CLI output changed?)", marker, path)
+	}
+	at := i + len(marker)
+	s = s[:at] + "\n" + adminStylesBlock + s[at:]
 	return os.WriteFile(path, []byte(s), 0o644)
 }
 

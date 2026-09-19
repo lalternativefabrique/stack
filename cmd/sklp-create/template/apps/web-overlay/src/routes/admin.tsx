@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router'
 import { AdminLayout } from '@lalternative/admin'
+import '@lalternative/admin/styles.css'
 import { getProfile } from '@/lib/services/auth'
 import { hasAdminFeatures } from '@/lib/hooks/useAdminFeaturesEnabled'
 
