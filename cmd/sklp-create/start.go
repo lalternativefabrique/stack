@@ -157,14 +157,12 @@ func scaffoldWeb(name string) error {
 
 // webOverlayDeps are the dependencies the admin/auth overlay needs, added to
 // apps/web/package.json by patchWebDeps. @lalternative/{auth,admin} are the
-// shared packages; better-auth is their peer; pg backs the setup route's direct
-// SQL. Kept in one place so the versions are easy to bump.
+// shared packages; better-auth is their peer. Kept in one place so the
+// versions are easy to bump.
 var webOverlayDeps = map[string]string{
-	"@lalternative/auth":  "^0.16.0",
+	"@lalternative/auth":  "^1.7.0",
 	"@lalternative/admin": "^0.10.0",
 	"better-auth":         "^1.7.5",
-	"pg":                  "^8.23.0",
-	"@types/pg":           "^8.23.1",
 }
 
 // overlayWeb lays the admin/auth overlay over the freshly-scaffolded web app:
@@ -284,6 +282,7 @@ func relaxWebTSConfig(path string) error {
 // so those utilities resolve to nothing even once generated. Either gap alone
 // renders the back-office as unstyled boxes.
 const adminStylesBlock = `
+@source "../node_modules/@lalternative/auth/dist";
 @source "../node_modules/@lalternative/admin/dist";
 
 @theme inline {
@@ -500,6 +499,7 @@ func rename(name string) error {
 			return err
 		}
 		s := string(b)
+		s = strings.ReplaceAll(s, "__APP_NAME__", name)
 		s = strings.ReplaceAll(s, "@app/", "@"+name+"/")
 		s = strings.ReplaceAll(s, `"app/`, `"`+name+`/`)
 		s = strings.ReplaceAll(s, "module app/", "module "+name+"/")

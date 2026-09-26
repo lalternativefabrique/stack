@@ -1,81 +1,116 @@
-// Package middleware verifies the JWT minted by the web app (better-auth
-// session → jose SignJWT) and exposes the skalpai convention `GetUser(c)`.
-// The core never signs tokens; it only verifies the HS256 `token` cookie and
-// reads the `sub` (better-auth user id, TEXT), `email` and `name` claims.
+// Package middleware names the person behind a protected route: a token
+// urbangate issued for them (urbangate ADR 0009), read by go/websession, then
+// mapped to the local account row everything in this core is keyed on.
 package middleware
 
 import (
+	"context"
 	"errors"
+	"log"
 	"net/http"
 	"os"
+	"strings"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+
+	"github.com/lalternative/packages/go/websession"
 )
 
 type User struct {
-	ID    string
-	Email string
-	Name  string
+	ID         string
+	IdentityID string
+	Email      string
+	Name       string
+	Role       string
 }
 
-type claims struct {
-	Email string `json:"email"`
-	Name  string `json:"name"`
-	jwt.RegisteredClaims
+// PersonResolver turns a raw token into the person urbangate signed it for.
+// *websession.Guard's Resolve is the one main wires.
+type PersonResolver func(ctx context.Context, raw string) (websession.User, error)
+
+// AccountResolver names the local account a person is scoped by.
+// account.Service.ResolvePerson is the one main wires.
+type AccountResolver func(ctx context.Context, identityID, email, name string) (string, error)
+
+// NewGuard trusts urbangate for the people it signs, from OIDC_ISSUER_URL and
+// OIDC_AUDIENCE. It exits rather than booting unable to verify: such a core
+// would refuse every signed-in person anyway, and failing at boot names the
+// missing variable instead of 401-ing one request at a time.
+func NewGuard() *websession.Guard {
+	issuer := strings.TrimRight(os.Getenv("OIDC_ISSUER_URL"), "/")
+	if issuer == "" {
+		issuer = "https://id.urbangate.dev"
+	}
+	audience := os.Getenv("OIDC_AUDIENCE")
+	if audience == "" {
+		audience = "__APP_NAME__"
+	}
+	g, err := websession.New(websession.Config{Product: audience, Urbangate: issuer})
+	if err != nil {
+		log.Fatalf("auth: %v", err)
+	}
+	return g
 }
 
-// RequireAuth verifies the `token` cookie (or Bearer header) against JWT_SECRET
-// and stores the resolved User in the echo context. JWT_SECRET MUST match the
-// web app's JWT_SECRET.
-func RequireAuth() echo.MiddlewareFunc {
-	secret := []byte(os.Getenv("JWT_SECRET"))
+// RequireAuth verifies the bearer token (or the `<product>_token` cookie
+// @lalternative/auth sets) as one urbangate issued for a person, and stores
+// the resolved User in the echo context.
+func RequireAuth(resolvePerson PersonResolver, resolveAccount AccountResolver) echo.MiddlewareFunc {
+	product := os.Getenv("OIDC_AUDIENCE")
+	if product == "" {
+		product = "__APP_NAME__"
+	}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			raw := tokenFromRequest(c)
+			raw := tokenFromRequest(c, product)
 			if raw == "" {
 				return echo.NewHTTPError(http.StatusUnauthorized, "unauthenticated")
 			}
-			u, err := parse(raw, secret)
-			if err != nil {
+			ctx := c.Request().Context()
+			person, err := resolvePerson(ctx, raw)
+			if errors.Is(err, websession.ErrUnavailable) {
+				return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "identity_provider_unavailable"})
+			}
+			if err != nil || person.IdentityID == "" {
 				return echo.NewHTTPError(http.StatusUnauthorized, "unauthenticated")
 			}
-			c.Set("user", u)
+			id, err := resolveAccount(ctx, person.IdentityID, person.Email, person.Name)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusServiceUnavailable, "account unavailable")
+			}
+			c.Set("user", User{
+				ID:         id,
+				IdentityID: person.IdentityID,
+				Email:      person.Email,
+				Name:       person.Name,
+				Role:       person.Role,
+			})
 			return next(c)
 		}
 	}
 }
 
-func tokenFromRequest(c echo.Context) string {
-	if cookie, err := c.Cookie("token"); err == nil && cookie.Value != "" {
-		return cookie.Value
+// RequireRole refuses everyone but this product's holders of role, 403.
+func RequireRole(role string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			u, ok := GetUser(c)
+			if !ok || u.Role != role {
+				return echo.NewHTTPError(http.StatusForbidden, "forbidden")
+			}
+			return next(c)
+		}
 	}
+}
+
+func tokenFromRequest(c echo.Context, product string) string {
 	if auth := c.Request().Header.Get("Authorization"); len(auth) > 7 && auth[:7] == "Bearer " {
 		return auth[7:]
 	}
-	return ""
-}
-
-func parse(raw string, secret []byte) (User, error) {
-	var cl claims
-	tok, err := jwt.ParseWithClaims(raw, &cl, func(t *jwt.Token) (any, error) {
-		if t.Method != jwt.SigningMethodHS256 {
-			return nil, errors.New("unexpected signing method")
-		}
-		return secret, nil
-	},
-		// Belt-and-suspenders alg guard: reject anything but HS256 at the
-		// parser level, before the keyfunc runs, so an alg-confusion token
-		// (alg:none, RS256→HS256) can't slip through a future keyfunc edit.
-		jwt.WithValidMethods([]string{"HS256"}),
-		// Reject tokens without an exp claim outright, instead of treating a
-		// missing expiry as "never expires".
-		jwt.WithExpirationRequired(),
-	)
-	if err != nil || !tok.Valid || cl.Subject == "" {
-		return User{}, errors.New("invalid token")
+	if cookie, err := c.Cookie(product + "_token"); err == nil && cookie.Value != "" {
+		return cookie.Value
 	}
-	return User{ID: cl.Subject, Email: cl.Email, Name: cl.Name}, nil
+	return ""
 }
 
 func GetUser(c echo.Context) (User, bool) {

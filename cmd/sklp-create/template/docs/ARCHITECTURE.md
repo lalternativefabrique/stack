@@ -59,13 +59,39 @@ ships a working example — copy it, change the subject and the body of `Handle`
 > silently loses or infinitely retries messages. If you find yourself calling
 > `js.Subscribe`/`Consume` directly, stop — use the brick.
 
+## Auth seam
+
+Nobody has an account here. urbangate (Ory Kratos + Hydra) is the suite's
+identity provider, behind this app's own screens (urbangate ADR 0009):
+
+- `apps/web` renders sign-up, sign-in, the e-mail code, recovery and the
+  account settings with `@lalternative/auth`, and its server drives the Kratos
+  flows through `createUrbangateAuth` (`lib/auth.ts`). Session guards run
+  server-side (`lib/get-server-session.ts`), never in the browser alone.
+- The browser reaches the core only through the web's `/api/core/*` proxy
+  (`auth.coreProxy`), which attaches the person's token; the token never
+  reaches page scripts.
+- `apps/core/middleware` verifies that token with `go/websession`
+  (`OIDC_ISSUER_URL`, `OIDC_AUDIENCE`) and `account.ResolvePerson` maps the
+  identity to the local `"user"` row every table is keyed on.
+- `/admin` is the product's console: the suite's team signs in through
+  urbangate's SSO (`sso` on the auth, `<product>:admin` role), people and
+  roles are managed in urbangate's console, not here.
+- Account deletion is the settings page's `DeleteAccountSteps` calling
+  `DELETE /api/v1/account` on the core, idempotent so a failed step is
+  retried whole.
+
+Each product needs two Hydra clients declared in urbangate
+(`ory/hydra/clients{,-dev}/<product>-admin.json` and `-provisioner.json`)
+and the team identity granted `<product>:admin`.
+
 ## Observability seam
 
 `apps/core/observability` wraps `github.com/lalternative/packages/skalpai/sdk-go`
 and configures OTEL traces, metrics, and logs exporters at boot. Disabled
 (no-op) when `SKALPAI_ENDPOINT` or `SKALPAI_API_KEY` are empty, so
 `go test ./...` and offline dev don't fight the SDK. The web app should
-ship `@digstack/sdk-browser` for RUM (left for the consuming project to
+ship `@lalternative/skalpai-sdk-browser` for RUM (left for the consuming project to
 add — it's not in the stack to avoid a forced dep).
 
 ## sklp seam
