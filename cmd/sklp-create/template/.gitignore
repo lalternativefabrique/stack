@@ -10,3 +10,4 @@ data/
 .sklp/cache/
 .sklp/logs/
 .DS_Store
+.pnpm-store/
