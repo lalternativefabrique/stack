@@ -5,7 +5,7 @@
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
-// @description Pass `Bearer <token>`. JWT is verified by the gateway; the user id arrives as the X-User-Id header.
+// @description Pass `Bearer <token>`: the access token urbangate issued for the person. The web's core proxy attaches it from its session.
 package main
 
 import (
@@ -86,23 +86,13 @@ func main() {
 
 	health.Register(e)
 
-	// Account/auth endpoints (e.g. logout) are public: clearing the session
-	// cookie must work without a valid token, so they mount on the root Echo
-	// instance rather than under the RequireAuth-guarded /api/v1 group.
-	account.NewService(pool).RegisterRoutes(e)
+	accountSvc := account.NewService(pool)
 
-	// Protected API. The web app reverse-proxies browser requests to /api/v1/*
-	// verbatim (see apps/web routes/api/v1/$.ts). Every request carries the
-	// `token` cookie (or Authorization: Bearer) verified by RequireAuth.
-	protected := e.Group("/api/v1", middleware.RequireAuth())
-	protected.GET("/me", func(c echo.Context) error {
-		u, _ := middleware.GetUser(c)
-		return c.JSON(http.StatusOK, map[string]string{
-			"user_id": u.ID,
-			"email":   u.Email,
-			"name":    u.Name,
-		})
-	})
+	// Protected API. The web app reverse-proxies browser requests under
+	// /api/core/* here, stripping that prefix and attaching the person's token
+	// (see apps/web routes/api/core.$.ts).
+	protected := e.Group("/api/v1", middleware.RequireAuth(middleware.NewGuard().Resolve, accountSvc.ResolvePerson))
+	accountSvc.RegisterRoutes(protected)
 	exampleSvc, err := example.NewService(ctx)
 	if err != nil {
 		log.Fatalf("example service: %v", err)

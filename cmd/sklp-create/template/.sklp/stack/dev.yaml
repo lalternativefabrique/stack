@@ -43,6 +43,10 @@ services:
     env:
       DATABASE_URL: postgres://app:app@postgres:5432/app?sslmode=disable
       NATS_URL: nats://nats:4222
+      # The local urbangate stack (hydra :4444, kratos :4433), started from the
+      # urbangate repo with `sklp dev stack`.
+      OIDC_ISSUER_URL: http://localhost:4444
+      OIDC_AUDIENCE: __APP_NAME__
     ready:
       http: /health
       timeout: 90s
@@ -55,10 +59,17 @@ services:
     depends_on:
       - core
     env:
-      API_URL: http://core:4100
+      CORE_URL: http://core:4100
       # Overrides .env's PORT=4100 (core's), which TanStack Start honours over --port.
       PORT: "5273"
+      # Sign-in goes through the suite's identity provider even on a laptop:
+      # URBANGATE_CLIENT_SECRET and URBANGATE_PROVISIONER_CLIENT_SECRET come
+      # from .env, the dev clients of urbangate's ory/hydra/clients-dev.
+      URBANGATE_ISSUER_URL: http://localhost:4444
+      KRATOS_PUBLIC_URL: http://localhost:4433
     ready:
-      http: /
+      # A public screen: the home needs a session, and its guard needs the
+      # urbangate secrets, so probing it would fail a stack that is fine.
+      http: /sign-in
       # First boot installs the whole workspace before vite starts.
       timeout: 300s

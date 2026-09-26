@@ -1,39 +1,33 @@
-import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router'
+import { createFileRoute, ErrorComponent, Link, Outlet, redirect } from '@tanstack/react-router'
+import type { ErrorComponentProps } from '@tanstack/react-router'
 import { AdminLayout } from '@lalternative/admin'
 import '@lalternative/admin/styles.css'
-import { getProfile } from '@/lib/services/auth'
-import { hasAdminFeatures } from '@/lib/hooks/useAdminFeaturesEnabled'
+import { checkAdminAccess } from '@/lib/admin-session'
+
+class IdentityProviderUnavailable extends Error {}
 
 /**
- * Back-office shell. It deliberately sits outside `_protected` (no app chrome),
- * so it re-does the session guard and adds the admin-role check on top.
- *
- * `/admin/login` and `/admin/setup` are excluded from this layout (their files
- * carry a trailing underscore): login must be reachable without an admin
- * session, and setup bootstraps the very first admin.
- *
- * The guard here is a navigation hint only — it is skipped during SSR and every
- * admin endpoint re-checks the role server-side.
+ * `/admin/login` escapes this layout by the trailing underscore on its
+ * `admin_` segment, so it stays reachable without an admin session.
  */
 export const Route = createFileRoute('/admin')({
-  beforeLoad: async ({ context }) => {
-    if (typeof window === 'undefined') return
-    let user
-    try {
-      user = await context.queryClient.ensureQueryData({
-        queryKey: ['me'],
-        queryFn: getProfile,
-        staleTime: Infinity,
-      })
-    } catch {
-      throw redirect({ to: '/admin/login' })
-    }
-    if (!hasAdminFeatures(user)) {
-      throw redirect({ to: '/admin/login' })
-    }
+  beforeLoad: async () => {
+    const access = await checkAdminAccess()
+    if (access === 'sign_in') throw redirect({ to: '/admin/login', replace: true })
+    if (access === 'unavailable') throw new IdentityProviderUnavailable()
   },
+  errorComponent: AdminUnavailable,
   component: AdminShell,
 })
+
+function AdminUnavailable({ error }: ErrorComponentProps) {
+  if (!(error instanceof IdentityProviderUnavailable)) return <ErrorComponent error={error} />
+  return (
+    <p role="alert" className="p-8 text-sm text-muted-foreground">
+      Le service d'identité ne répond pas pour le moment. Réessayez dans un instant.
+    </p>
+  )
+}
 
 function AdminShell() {
   const linkClass = 'text-muted-foreground hover:text-foreground'
@@ -41,14 +35,14 @@ function AdminShell() {
   return (
     <AdminLayout
       nav={
-        <>
-          <Link to="/admin" activeOptions={{ exact: true }} className={linkClass} activeProps={{ className: activeClass }}>
-            Tableau de bord
-          </Link>
-          <Link to="/admin/users" className={linkClass} activeProps={{ className: activeClass }}>
-            Utilisateurs
-          </Link>
-        </>
+        <Link
+          to="/admin"
+          activeOptions={{ exact: true }}
+          className={linkClass}
+          activeProps={{ className: activeClass }}
+        >
+          Tableau de bord
+        </Link>
       }
       backToApp={
         <Link to="/" className="text-muted-foreground hover:text-foreground">

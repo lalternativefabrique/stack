@@ -1,17 +1,13 @@
 /**
- * Custom fetcher for the orval-generated API client.
- * Auth is a same-origin HttpOnly `token` cookie — the web app mints it from the
- * better-auth session (apps/web lib/mint-core-token.ts) and it travels
- * automatically via credentials: "include". No token injection needed here.
+ * Custom fetcher for the orval-generated API client. Calls go through the
+ * web's same-origin core proxy (apps/web routes/api/core.$.ts), which attaches
+ * the person's urbangate token from the session and forwards to the Go core:
+ * no CORS, no token in the browser. The core mounts /api/v1 (apps/core/main.go),
+ * and orval-generated urls are relative to it (e.g. /examples).
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Calls go through the same-origin reverse proxy (apps/web routes/api/v1/$.ts),
-// which forwards to the Go core from inside the web service. Because the browser
-// only ever hits its own origin, there is NO CORS: no preflight, no
-// ALLOWED_ORIGINS to keep in sync. The core mounts /api/v1 (apps/core/main.go),
-// and orval-generated urls are relative to it (e.g. /projects).
-const API_BASE = "/api/v1";
+const API_BASE = "/api/core/api/v1";
 
 export async function coreFetcher<T>(
   url: string,

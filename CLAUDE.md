@@ -22,6 +22,7 @@ CLI (nothing frontend is embedded, so it never drifts). `pnpm` must be on PATH.
 
 ## Conventions
 - All code, comments, commit messages in English
+- **Minimal comments (MANDATORY)**: the code is the only real source of truth — it is what runs, and it is always current. A comment is an unverified claim: nothing compiles it, nothing tests it, and it goes stale the first time the code next to it changes. A stale comment is worse than none, because it actively misleads the next reader into trusting behaviour that no longer exists. So write the strict minimum, especially in frontend (TS/React) and Go API code. No comments restating the code, no section banners, no step narration (`// 1. validate`), no JSDoc repeating TS types. Only tooling directives (`//go:generate`, swag annotations), linter-required exported Go doc comments, and short notes for genuinely non-obvious external constraints (protocol quirk, upstream bug, race) — things the code truly cannot express. If a comment feels needed, rename or extract a function instead: that explanation lives in the code and cannot drift. Remove noise comments in code you touch. Applies to subagents and skills too.
 - Commits must include `Co-Authored-By: codesyl <codesyl@pm.me>`
 - Do NOT include `Co-Authored-By: Claude` or any Anthropic co-author
 
