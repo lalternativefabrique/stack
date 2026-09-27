@@ -152,7 +152,10 @@ func scaffoldWeb(name string) error {
 	if err := relaxWebTSConfig(filepath.Join(abs, "tsconfig.json")); err != nil {
 		return err
 	}
-	return wireAdminStyles(filepath.Join(abs, "src", "styles.css"))
+	if err := wireAdminStyles(filepath.Join(abs, "src", "styles.css")); err != nil {
+		return err
+	}
+	return wireNakodaAnalytics(filepath.Join(abs, "src", "routes", "__root.tsx"))
 }
 
 // webOverlayDeps are the dependencies the admin/auth overlay needs, added to
@@ -160,7 +163,7 @@ func scaffoldWeb(name string) error {
 // shared packages; better-auth is their peer. Kept in one place so the
 // versions are easy to bump.
 var webOverlayDeps = map[string]string{
-	"@lalternative/auth":  "^1.8.0",
+	"@lalternative/auth":  "^1.9.0",
 	"@lalternative/admin": "^0.10.0",
 	"better-auth":         "^1.7.5",
 }
@@ -538,4 +541,29 @@ func gitInit(dir string) error {
 	cmd := exec.Command("git", "init", "--quiet")
 	cmd.Dir = dir
 	return cmd.Run()
+}
+
+const nakodaImport = "import { NakodaAnalytics } from '@lalternative/auth'\n"
+
+const nakodaTag = "{import.meta.env.VITE_NAKODA_SITE && (\n          <NakodaAnalytics site={import.meta.env.VITE_NAKODA_SITE} />\n        )}\n        "
+
+// wireNakodaAnalytics mounts nakoda's page counting in the generated root
+// layout, before <Scripts />, so every page of the app is counted once the
+// app is given its site key.
+func wireNakodaAnalytics(path string) error {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	s := string(b)
+	if strings.Contains(s, "NakodaAnalytics") {
+		return nil
+	}
+	marker := "<Scripts />"
+	i := strings.Index(s, marker)
+	if i < 0 {
+		return fmt.Errorf("no %s in %s (TanStack CLI output changed?)", marker, path)
+	}
+	s = nakodaImport + s[:i] + nakodaTag + s[i:]
+	return os.WriteFile(path, []byte(s), 0o644)
 }
