@@ -160,7 +160,7 @@ func scaffoldWeb(name string) error {
 // shared packages; better-auth is their peer. Kept in one place so the
 // versions are easy to bump.
 var webOverlayDeps = map[string]string{
-	"@lalternative/auth":  "^1.7.0",
+	"@lalternative/auth":  "^1.8.0",
 	"@lalternative/admin": "^0.10.0",
 	"better-auth":         "^1.7.5",
 }
