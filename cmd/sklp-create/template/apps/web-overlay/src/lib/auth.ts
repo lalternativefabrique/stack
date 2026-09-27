@@ -33,6 +33,7 @@ function build() {
     coreUrl: CORE_URL,
     accountDeletion: ({ accessToken }) => accountDeletion(accessToken),
     sso: { appUrl: process.env.APP_URL ?? 'http://localhost:5273' },
+    nakoda: process.env.NAKODA_KEY ? { key: process.env.NAKODA_KEY } : undefined,
   })
 }
 
