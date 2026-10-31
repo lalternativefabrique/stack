@@ -8,8 +8,8 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/google/uuid"
 
-	"github.com/lalternative/packages/go/eda/pkg/cqrs"
-	"github.com/lalternative/packages/go/eda/pkg/db"
+	"github.com/lalternativefabrique/eventkit/pkg/cqrs"
+	"github.com/lalternativefabrique/eventkit/pkg/db"
 
 	"app/core/example/application/create_example"
 	"app/core/example/application/rename_example"

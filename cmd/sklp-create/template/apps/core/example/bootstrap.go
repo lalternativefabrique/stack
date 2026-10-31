@@ -9,11 +9,11 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/lalternative/packages/go/eda/pkg/cqrs"
-	"github.com/lalternative/packages/go/eda/pkg/db"
-	"github.com/lalternative/packages/go/eda/pkg/di"
-	"github.com/lalternative/packages/go/eda/pkg/logger"
-	"github.com/lalternative/packages/go/eda/pkg/obs"
+	"github.com/lalternativefabrique/eventkit/pkg/cqrs"
+	"github.com/lalternativefabrique/eventkit/pkg/db"
+	"github.com/lalternativefabrique/eventkit/pkg/di"
+	"github.com/lalternativefabrique/eventkit/pkg/logger"
+	"github.com/lalternativefabrique/eventkit/pkg/obs"
 
 	"app/core/example/application/create_example"
 	"app/core/example/application/get_example"

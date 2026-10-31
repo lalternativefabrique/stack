@@ -20,7 +20,7 @@ app starts with the full skalpai dev workflow + observability already wired.
   (`ResolvePerson`), and serves `GET /me` and the account erasure
   `DELETE /account` the web's settings page calls. Grow it into the DDD
   layout only if account state moves into the core.
-- Event-sourced via `github.com/lalternative/packages/go/eda`: aggregate
+- Event-sourced via `github.com/lalternativefabrique/eventkit`: aggregate
   (`ddd.BaseAggregateRoot` + `ddd.Raise`) → events → projection (read model) →
   typed command/query routers (`cqrs.Execute`/`cqrs.Ask`), wired with `di`.
   Modelled on `go/eda/examples/banking`. `example/`'s event store is in-memory
@@ -45,7 +45,7 @@ app starts with the full skalpai dev workflow + observability already wired.
   source via subpaths (`@app/front/api/<tag>/<tag>`). `lib/front/src/api` and
   `apps/core/docs` are checked in.
 - **Never hand-roll a JetStream consumer.** Consume integration events through
-  `github.com/lalternative/packages/go/eda/pkg/consumer` (`consumer.Run` + an
+  `github.com/lalternativefabrique/eventkit/pkg/consumer` (`consumer.Run` + an
   `EventHandler`). It provides `Term`/`MaxDeliver`/`BackOff`/DLQ/heartbeat/
   idempotency/reconnect by default — you write only `Handle`. New handlers go
   under `apps/core/<context>/application/event-handlers/`; copy

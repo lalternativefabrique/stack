@@ -7,7 +7,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/lalternative/packages/go/eda/pkg/ddd"
+	"github.com/lalternativefabrique/eventkit/pkg/ddd"
 
 	"app/core/example/domain"
 )

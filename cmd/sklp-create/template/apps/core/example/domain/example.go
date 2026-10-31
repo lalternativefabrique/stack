@@ -2,14 +2,14 @@
 // bounded context that demonstrates the go/eda CQRS building blocks
 // (ddd.BaseAggregateRoot + ddd.Raise + LoadFromHistory). It is an EXAMPLE:
 // copy it to a real context name, or delete it. Modelled on
-// github.com/lalternative/packages/go/eda/examples/banking.
+// github.com/lalternativefabrique/eventkit/examples/banking.
 package domain
 
 import (
 	"fmt"
 
-	"github.com/lalternative/packages/go/eda/pkg/cqrs"
-	"github.com/lalternative/packages/go/eda/pkg/ddd"
+	"github.com/lalternativefabrique/eventkit/pkg/cqrs"
+	"github.com/lalternativefabrique/eventkit/pkg/ddd"
 )
 
 // ID is the aggregate identifier type (a UUID string).

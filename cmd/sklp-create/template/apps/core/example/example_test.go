@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/lalternative/packages/go/eda/pkg/db"
+	"github.com/lalternativefabrique/eventkit/pkg/db"
 
 	"app/core/example/application/create_example"
 	"app/core/example/application/get_example"

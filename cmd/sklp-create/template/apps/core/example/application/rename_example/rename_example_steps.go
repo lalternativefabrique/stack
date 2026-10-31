@@ -8,9 +8,9 @@ import (
 	"github.com/cucumber/godog"
 	"github.com/google/uuid"
 
-	"github.com/lalternative/packages/go/eda/pkg/cqrs"
-	"github.com/lalternative/packages/go/eda/pkg/db"
-	"github.com/lalternative/packages/go/eda/pkg/ddd"
+	"github.com/lalternativefabrique/eventkit/pkg/cqrs"
+	"github.com/lalternativefabrique/eventkit/pkg/db"
+	"github.com/lalternativefabrique/eventkit/pkg/ddd"
 
 	"app/core/example/application/create_example"
 	"app/core/example/domain"

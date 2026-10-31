@@ -2,7 +2,7 @@
 // handler implements consumer.EventHandler and writes only business logic in
 // Handle; all JetStream redelivery semantics (Term on permanent errors, bounded
 // MaxDeliver, staged BackOff, the DLQ stream, ack heartbeats, the reconnect
-// loop) are provided by github.com/lalternative/packages/go/eda/pkg/consumer.
+// loop) are provided by github.com/lalternativefabrique/eventkit/pkg/consumer.
 //
 // Do NOT hand-roll a JetStream subscription here. Copy this file, change the
 // Subject/DurableName and the body of Handle — nothing else.
@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/lalternative/packages/go/eda/pkg/consumer"
+	"github.com/lalternativefabrique/eventkit/pkg/consumer"
 	"github.com/nats-io/nats.go"
 )
 

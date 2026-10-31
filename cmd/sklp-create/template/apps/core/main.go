@@ -19,7 +19,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	emw "github.com/labstack/echo/v4/middleware"
-	"github.com/lalternative/packages/go/eda/pkg/consumer"
+	"github.com/lalternativefabrique/eventkit/pkg/consumer"
 	"github.com/nats-io/nats.go"
 
 	"app/core/account"

@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/lalternative/packages/go/eda/pkg/cqrs"
+	"github.com/lalternativefabrique/eventkit/pkg/cqrs"
 
 	"app/core/example/domain"
 	"app/core/example/projection"
