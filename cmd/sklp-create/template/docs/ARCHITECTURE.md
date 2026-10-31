@@ -21,7 +21,7 @@ apps/core/<context>/          (see apps/core/example/ — CQRS via go/eda)
 ```
 
 Rationale: `apps/core/example/` is a runnable CQRS example built on
-`github.com/lalternative/packages/go/eda` (aggregate → event → projection →
+`github.com/lalternativefabrique/eventkit` (aggregate → event → projection →
 query, DI-wired), modelled on that lib's `examples/banking`. Its event store is
 **in-memory** (an example — swap `db.InMemoryStore` for a Postgres `db.Store` to
 persist). Copy the folder to a real context name, or delete it.
@@ -34,7 +34,7 @@ applied in lexical order at boot (must be idempotent — they run every boot).
 
 ## Event-driven seam (durable consumers)
 
-Integration events are consumed through `github.com/lalternative/packages/go/eda/pkg/consumer`,
+Integration events are consumed through `github.com/lalternativefabrique/eventkit/pkg/consumer`,
 **never** by hand-rolling a JetStream subscription. The brick owns every
 redelivery concern once, so handlers can't get them wrong:
 

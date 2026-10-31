@@ -5,7 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"github.com/lalternative/packages/go/eda/pkg/cqrs"
+	"github.com/lalternativefabrique/eventkit/pkg/cqrs"
 
 	"app/core/example/application/create_example"
 	"app/core/example/application/get_example"

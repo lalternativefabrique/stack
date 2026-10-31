@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/lalternative/packages/go/eda/pkg/cqrs"
+	"github.com/lalternativefabrique/eventkit/pkg/cqrs"
 )
 
 func TestExample_CreateThenRename(t *testing.T) {
