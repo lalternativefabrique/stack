@@ -1,5 +1,16 @@
 basePath: /api/v1
 definitions:
+  account.MeDTO:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+      user_id:
+        type: string
+    type: object
   echo.HTTPError:
     properties:
       message: {}
@@ -27,6 +38,21 @@ info:
   title: Core API
   version: 0.1.0
 paths:
+  /account:
+    delete:
+      operationId: deleteAccount
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete the caller's account and everything it holds
+      tags:
+      - account
   /examples:
     post:
       consumes:
@@ -114,10 +140,23 @@ paths:
       summary: Rename an example
       tags:
       - examples
+  /me:
+    get:
+      operationId: me
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/account.MeDTO'
+      summary: The signed-in person
+      tags:
+      - account
 securityDefinitions:
   BearerAuth:
-    description: Pass `Bearer <token>`. JWT is verified by the gateway; the user id
-      arrives as the X-User-Id header.
+    description: 'Pass `Bearer <token>`: the access token urbangate issued for the
+      person. The web''s core proxy attaches it from its session.'
     in: header
     name: Authorization
     type: apiKey

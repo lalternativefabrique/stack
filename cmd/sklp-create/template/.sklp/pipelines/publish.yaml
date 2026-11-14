@@ -1,6 +1,7 @@
 version: 1
 kind: pipeline
 name: publish
+space: false
 description: |
   Build and push immutable Docker images for services impacted by the
   merged commit range on `main`.
@@ -9,10 +10,11 @@ description: |
   Tags are immutable — no `latest`, no overwrites. Trivy blocks the push
   on any fixable HIGH/CRITICAL finding.
 
-  Publishing the image is NOT deployment. ArgoCD Image Updater handles
-  rollout once the new tag lands in the registry.
+  Publishing the image is NOT deployment. The deployment is
+  .sklp/prod/deploy.yaml; once it is live, the watches of
+  .sklp/image-watches.yaml roll each new tag onto its space.
 
-require:
+on:
   branches: [main]
   clean_tree: true
 
@@ -23,19 +25,17 @@ env_files:
 tag:
   strategy: date-sha
 
-registry:
-  provider: scaleway
+secrets:
+  - SCW_SECRET_KEY
 
-vulnerabilities:
-  go:
-    severity: [HIGH, CRITICAL]
-  pnpm:
-    severity: [high, critical]
-    prod_only: true
+registries:
+  rg.fr-par.scw.cloud:
+    username: nologin
+    password: ${SCW_SECRET_KEY}
 
 tools:
-  go: "1.26.5"
-  node: "24.16.0"
+  go: "1.26.11"
+  node: "24.19.0"
   pnpm: "11.3.0"
 
 scopes:
@@ -46,13 +46,16 @@ scopes:
     - "go.work.sum"
   web:
     - "apps/web/**"
+    - "lib/front/**"
     - "package.json"
     - "pnpm-lock.yaml"
+    - "pnpm-workspace.yaml"
     - "Dockerfile.web"
 
 steps:
   - name: core-image
-    kind: docker-build
+    kind: publish
+    platform: linux/amd64
     scope: [core]
     context: .
     dockerfile: Dockerfile
@@ -60,7 +63,8 @@ steps:
     tag: "{{ publish_tag }}"
 
   - name: web-image
-    kind: docker-build
+    kind: publish
+    platform: linux/amd64
     scope: [web]
     context: .
     dockerfile: Dockerfile.web

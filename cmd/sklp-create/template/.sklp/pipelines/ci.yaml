@@ -13,9 +13,12 @@ inputs:
     default: origin/main
 
 tools:
-  go: "1.26.5"
-  node: "24.16.0"
+  go: "1.26.11"
+  node: "24.19.0"
   pnpm: "11.3.0"
+
+on:
+  branches: ['**', '!main']
 
 scopes:
   core:
@@ -40,6 +43,11 @@ steps:
     run: |
       git status --short
       git branch --show-current
+
+  - name: build-core
+    scope: [core, shared]
+    tools: [go]
+    run: cd apps/core && go build ./... && go vet ./...
 
   - name: test-core
     scope: [core, shared]

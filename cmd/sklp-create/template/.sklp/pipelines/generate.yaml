@@ -14,7 +14,7 @@ description: |
   you need the typed client.
 
 tools:
-  go: "1.26.5"
+  go: "1.26.11"
 
 steps:
   - name: swagger

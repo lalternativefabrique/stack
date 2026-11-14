@@ -1,0 +1,4 @@
+# One accepted Go vulnerability per line: <id> <expires YYYY-MM-DD> <reason>.
+# An entry past its date fails the scan again.
+GO-2026-6872 2026-12-31 echo v4 has no fix; core mounts no rate limiter, so a spoofed X-Forwarded-For only reaches the access log
+GO-2026-6875 2026-12-31 echo v4 has no fix; core never mounts echo's Proxy middleware, the only code that forwards X-Real-IP

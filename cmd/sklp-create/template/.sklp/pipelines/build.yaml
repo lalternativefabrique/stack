@@ -4,8 +4,8 @@ name: build
 description: Build the core service binary and frontend bundles.
 
 tools:
-  go: "1.26.5"
-  node: "24.16.0"
+  go: "1.26.11"
+  node: "24.19.0"
   pnpm: "11.3.0"
 
 steps:

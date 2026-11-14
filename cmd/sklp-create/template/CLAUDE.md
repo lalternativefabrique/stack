@@ -4,7 +4,7 @@ Skalpai-style application stack. Generated from this template, each new
 app starts with the full skalpai dev workflow + observability already wired.
 
 ## Stack
-- **Backend**: Go 1.25 + Echo v4 + Postgres + NATS JetStream — port 4100
+- **Backend**: Go 1.26 + Echo v4 + Postgres + NATS JetStream — port 4100
 - **Frontend**: React 19 + TanStack Router + Tailwind v4 — port 5273
 - **Auth**: urbangate, the suite's identity provider, behind this app's own screens via
   `@lalternative/auth/urbangate` (Kratos holds the identity; the core verifies the token
@@ -68,12 +68,18 @@ raw `git checkout -b`.
 4. After merge, update local `main`.
 5. `sklp run publish` from clean local `main`.
 6. Publish only impacted services. Tags `YYYYMMDD-HHMM-<short-sha>`.
-7. ArgoCD / Image Updater handles rollout.
+7. First deployment: put the published tags and the real host in
+   `.sklp/prod/deploy.yaml` / `.sklp/prod/config.yaml`, store the secrets in the
+   Skalpai project, then `sklp deploy apply prod -context <node>`.
+8. After that, declare the node in `.sklp/deploy-root.yaml` and the services in
+   `.sklp/image-watches.yaml`: Skalpai rolls each newly published tag onto the
+   space. There is no Kubernetes and no ArgoCD.
 
 Rules:
 - Never publish from a feature branch.
 - Never claim deployment success when only the image was pushed.
-- Treat `.sklp/pipelines/ci.yaml` and `.sklp/pipelines/publish.yaml` as the source of truth.
+- Treat `.sklp/pipelines/ci.yaml`, `.sklp/pipelines/publish.yaml` and `.sklp/prod/deploy.yaml` as the source of truth.
+- Before a production `sklp deploy apply`, print the target (`sklp deploy context list`) and say it.
 
 ## Development
 
@@ -88,7 +94,7 @@ Ports: core 4100, web 5273.
 Other entry points:
 - `sklp run build` — build `bin/core` and the web bundle
 - `sklp run ci` — lint + test impacted services
-- `sklp run secops` — gitleaks, semgrep, govulncheck, pnpm audit, trivy
+- `sklp run secops` — gitleaks, govulncheck, pnpm audit, trivy
 - `sklp run publish` — build, scan, push impacted Docker images (main only)
 
 ## CI / triggers — NO GitHub Actions

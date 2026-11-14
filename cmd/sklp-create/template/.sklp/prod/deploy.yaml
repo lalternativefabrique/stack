@@ -1,0 +1,108 @@
+version: 1
+kind: deploy
+name: prod
+
+registries:
+  rg.fr-par.scw.cloud:
+    username: nologin
+    password: ${SCW_SECRET_KEY}
+
+gateway:
+  email: ${ACME_EMAIL}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    port: 5432
+    env:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: app
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    resources:
+      cpu: "1"
+      memory: 1G
+    ready:
+      log: "database system is ready to accept connections"
+      timeout: 120s
+
+  nats:
+    image: nats:2.12.15-alpine
+    port: 4222
+    env:
+      NATS_PASSWORD: ${NATS_PASSWORD}
+    volumes: ["nats-data:/data"]
+    command:
+      - sh
+      - -c
+      - >-
+        printf 'authorization { users [ { user: app, password: "%s" } ] }\n' "$NATS_PASSWORD" > /tmp/auth.conf &&
+        exec nats-server -js -sd /data -c /tmp/auth.conf
+    resources:
+      cpu: "500m"
+      memory: 512M
+    ready:
+      log: "Server is ready"
+      timeout: 30s
+
+  # The core applies its own migrations at boot (db.Migrate in main.go), so
+  # there is no migrate job. The tag is the one `sklp run publish` printed.
+  core:
+    image: rg.fr-par.scw.cloud/skaplai/core:REPLACE_WITH_PUBLISHED_TAG
+    port: 4100
+    depends_on: [postgres, nats]
+    env:
+      PORT: "4100"
+      DATABASE_URL: postgres://app:${POSTGRES_PASSWORD}@postgres:5432/app?sslmode=disable
+      NATS_URL: nats://app:${NATS_PASSWORD}@nats:4222
+      OIDC_ISSUER_URL: https://id.urbangate.dev
+      OIDC_AUDIENCE: __APP_NAME__
+      SKALPAI_ENDPOINT: https://api.skalpai.dev
+      SKALPAI_API_KEY: ${SKALPAI_API_KEY}
+      SKALPAI_PROJECT_ID: ${SKALPAI_PROJECT_ID}
+    resources:
+      cpu: "1"
+      memory: 1G
+    ready:
+      http: /health
+      timeout: 120s
+
+  web:
+    image: rg.fr-par.scw.cloud/skaplai/web:REPLACE_WITH_PUBLISHED_TAG
+    port: 5273
+    depends_on: [core]
+    env:
+      PORT: "5273"
+      NODE_ENV: production
+      CORE_URL: http://core:4100
+      APP_URL: https://${APP_HOST}
+      URBANGATE_ISSUER_URL: https://id.urbangate.dev
+      URBANGATE_CLIENT_ID: __APP_NAME__-admin
+      URBANGATE_CLIENT_SECRET: ${URBANGATE_CLIENT_SECRET}
+      URBANGATE_PROVISIONER_CLIENT_ID: __APP_NAME__-provisioner
+      URBANGATE_PROVISIONER_CLIENT_SECRET: ${URBANGATE_PROVISIONER_CLIENT_SECRET}
+      NAKODA_KEY: ${NAKODA_KEY}
+    resources:
+      cpu: "500m"
+      memory: 512M
+    ready:
+      tcp: "5273"
+      timeout: 90s
+
+spaces:
+  __APP_NAME__-production:
+    gateway:
+      routes:
+        - service: web
+          host: ${APP_HOST}
+          kind: web
+          redirect_apex: true
+          security_headers: true
+          compress: true
+        - service: web
+          host: ${APP_HOST}
+          path: /api/auth
+          kind: auth
+          security_headers: true

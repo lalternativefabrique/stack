@@ -112,8 +112,8 @@ func main() {
 
 	// Block on SIGTERM rather than on Start: the deferred cleanups above
 	// (consumers, NATS drain, pool) never run past a log.Fatal, which exits
-	// the process outright. Kubernetes sends SIGTERM and waits
-	// terminationGracePeriodSeconds before SIGKILL, so keep the drain under it.
+	// the process outright. The node sends SIGTERM and waits its grace period
+	// before SIGKILL, so keep the drain under it.
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig

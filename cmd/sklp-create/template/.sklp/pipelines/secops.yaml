@@ -1,58 +1,70 @@
 version: 1
 kind: pipeline
 name: secops
-description: |
-  Security scanning pipeline — gitleaks (secrets), govulncheck (Go vulns),
-  pnpm audit (JS vulns), trivy fs (misconfigurations + vulns).
-
-inputs:
-  base_ref:
-    type: string
-    required: false
-    default: origin/main
+extends: sklp:secops
 
 tools:
-  go: "1.26.5"
-  node: "24.16.0"
+  go: "1.26.11"
+  node: "24.19.0"
   pnpm: "11.3.0"
-  gitleaks: "8.18.4"
-  trivy: "0.70.0"
-  govulncheck: "1.1.4"
 
-scopes:
-  go-code:
-    - "**/*.go"
-    - "go.work"
-    - "go.work.sum"
-    - "**/go.mod"
-    - "**/go.sum"
-  ts-code:
-    - "**/*.ts"
-    - "**/*.tsx"
-    - "**/*.js"
-    - "**/*.jsx"
-    - "package.json"
-    - "pnpm-lock.yaml"
-  shared:
-    - ".sklp/**"
-    - "Dockerfile*"
-
+# Steps replace sklp:secops wholesale; only govulncheck differs, reading
+# .govulncheck-accept so a vulnerability with no upstream fix can be
+# accepted with a reason and an expiry instead of blocking every PR.
 steps:
   - name: gitleaks
     tools: [gitleaks]
-    run: gitleaks detect --source . --config .gitleaks.toml --no-banner --redact --exit-code 1
+    run: |
+      set -eu
+      set -- --source . --no-banner --redact --exit-code 1
+      [ -f .gitleaks.toml ] && set -- "$@" --config .gitleaks.toml
+      if git rev-parse --verify -q origin/main >/dev/null && [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+        set -- "$@" --log-opts=origin/main..HEAD
+      fi
+      gitleaks detect "$@"
 
-  - name: govulncheck-core
+  - name: govulncheck
     scope: [go-code]
-    tools: [govulncheck]
-    run: govulncheck -C apps/core ./...
+    tools: [go, govulncheck]
+    run: |
+      set -eu
+      today=$(date -u +%F)
+      accepted=$(grep -vE '^\s*(#|$)' .govulncheck-accept 2>/dev/null | awk -v t="$today" '$2 >= t {print $1}' | sort -u || true)
+      status=0
+      for mod in $(find . -name go.mod -not -path '*/node_modules/*' -not -path '*/vendor/*' -not -path './tmp/*' | sort); do
+        dir=$(dirname "$mod")
+        echo "== govulncheck $dir"
+        work=""
+        if [ -f go.work ] && ! grep -qE "^[[:space:]]*(use[[:space:]]+)?${dir}/?[[:space:]]*$" go.work; then
+          work=off
+        fi
+        out=$(GOWORK=${work:-$(go env GOWORK)} govulncheck -C "$dir" ./... 2>&1) && continue || true
+        echo "$out"
+        ids=$(echo "$out" | sed -n 's/^Vulnerability #[0-9]*: \(GO-[0-9-]*\).*/\1/p' | sort -u)
+        if [ -z "$ids" ]; then status=1; continue; fi
+        for id in $ids; do
+          if echo "$accepted" | grep -qx "$id"; then
+            echo "accepted: $id (.govulncheck-accept)"
+          else
+            echo "NOT accepted: $id"; status=1
+          fi
+        done
+      done
+      exit $status
 
   - name: pnpm-audit
     scope: [ts-code]
     tools: [node, pnpm]
-    run: pnpm audit --audit-level=high --prod
+    run: |
+      set -eu
+      [ -f pnpm-lock.yaml ] || { echo "no pnpm-lock.yaml, skipped"; exit 0; }
+      pnpm audit --audit-level=high --prod
 
-  - name: trivy-fs-misconfig
+  - name: trivy-misconfig
     scope: [shared, go-code, ts-code]
     tools: [trivy]
-    run: trivy fs --scanners misconfig --severity HIGH,CRITICAL --exit-code 1 .
+    run: |
+      set -eu
+      set -- --scanners misconfig --severity HIGH,CRITICAL --skip-dirs node_modules --exit-code 1
+      [ -f .trivyignore.yaml ] && set -- "$@" --ignorefile .trivyignore.yaml
+      trivy fs "$@" .
