@@ -1,0 +1,3 @@
+config:
+  APP_HOST: __APP_NAME__.example.com
+  ACME_EMAIL: admin@example.com

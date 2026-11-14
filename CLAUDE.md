@@ -27,9 +27,10 @@ CLI (nothing frontend is embedded, so it never drifts). `pnpm` must be on PATH.
 - Do NOT include `Co-Authored-By: Claude` or any Anthropic co-author
 
 ## The template ships (into generated projects, not run here)
-- **Backend**: Go 1.25 + Echo v4 + Postgres (pgx), DDD per bounded context
-- **`.sklp/`**: dev.yaml + pipelines (ci/build/publish/secops) driven by the
-  host-installed `sklp` CLI
+- **Backend**: Go 1.26 + Echo v4 + Postgres (pgx), DDD per bounded context
+- **`.sklp/`**: dev.yaml, pipelines (ci/build/generate/publish/secops) and the
+  production deployment (`prod/deploy.yaml` + `prod/config.yaml`), all driven by
+  the host-installed `sklp` CLI — no Kubernetes, no ArgoCD
 - **Dockerfile**: distroless, runs as `USER nonroot`
 - Dev deps (postgres, nats) are `image:` services so `sklp dev`'s embedded runc
   backend pulls them into spacenet — never `run: docker run` (no docker in the

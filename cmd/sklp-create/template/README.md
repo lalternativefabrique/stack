@@ -20,7 +20,7 @@ sklp dev stack                      # boots core (4100) + web (5273)
 ```
 .sklp/                 space.yaml + stack/dev.yaml + pipelines/{ci,build,generate,publish,secops}.yaml
 apps/
-  core/                Go 1.25 + Echo v4 + Postgres + NATS (DDD per bounded context)
+  core/                Go 1.26 + Echo v4 + Postgres + NATS (DDD per bounded context)
   web/                 React 19 + TanStack Start (SSR via Nitro)
 lib/front/             Shared front lib: typed React Query client (@app/front)
 Dockerfile*            One per shipped image (core distroless, web = Nitro SSR server)
@@ -48,7 +48,8 @@ Consume per-tag hooks from the package subpath, e.g.
 ## Workflow
 
 Source of truth: `.sklp/space.yaml` (runner recipe), `.sklp/stack/dev.yaml`
-(dev topology) + `.sklp/pipelines/*.yaml` (CI/build/publish).
+(dev topology), `.sklp/pipelines/*.yaml` (CI/build/publish) and
+`.sklp/prod/deploy.yaml` + `.sklp/prod/config.yaml` (production).
 
 | Command | What it runs |
 |---|---|
@@ -56,8 +57,9 @@ Source of truth: `.sklp/space.yaml` (runner recipe), `.sklp/stack/dev.yaml`
 | `sklp run ci` | Lint + test impacted services |
 | `sklp run generate` | Regenerate OpenAPI spec + typed API client (swag → orval) |
 | `sklp run build` | Build `bin/core` + web bundle |
-| `sklp run secops` | Security scan: gitleaks + semgrep + govulncheck + trivy |
+| `sklp run secops` | Security scan: gitleaks + govulncheck + pnpm audit + trivy |
 | `sklp run publish` | Build, scan (Trivy), push impacted images (main only) |
+| `sklp deploy apply prod` | Apply `.sklp/prod/deploy.yaml` to the active deploy context |
 
 **No GitHub Actions** drive `sklp` pipelines. CI runs via `sklp flow end`
 before a PR (and again on the PR). Remote dispatch is the skalpai UI.

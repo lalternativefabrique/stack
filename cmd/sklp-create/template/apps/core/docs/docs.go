@@ -15,6 +15,29 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/account": {
+            "delete": {
+                "tags": [
+                    "account"
+                ],
+                "summary": "Delete the caller's account and everything it holds",
+                "operationId": "deleteAccount",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/examples": {
             "post": {
                 "security": [
@@ -152,9 +175,46 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/me": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "The signed-in person",
+                "operationId": "me",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/account.MeDTO"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "account.MeDTO": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
         "echo.HTTPError": {
             "type": "object",
             "properties": {
@@ -191,7 +251,7 @@ const docTemplate = `{
     },
     "securityDefinitions": {
         "BearerAuth": {
-            "description": "Pass ` + "`" + `Bearer \u003ctoken\u003e` + "`" + `. JWT is verified by the gateway; the user id arrives as the X-User-Id header.",
+            "description": "Pass ` + "`" + `Bearer \u003ctoken\u003e` + "`" + `: the access token urbangate issued for the person. The web's core proxy attaches it from its session.",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"
